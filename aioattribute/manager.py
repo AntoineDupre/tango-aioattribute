@@ -34,6 +34,7 @@ class SubscriptionManager:
             # TODO Event subsction is failling if we subscribe to all event at
             # the same time. So, does it makes sense to subscribe in a task
             # if we have to sleep there ?
+            # See tango issue https://github.com/tango-controls/pytango/issues/307
             await asyncio.sleep(0.01)
             # Send listener to all the required attributes.
             attribute = self._get_attribute(name)
