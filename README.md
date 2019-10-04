@@ -14,22 +14,11 @@ import asyncio
 from aioattribute import SubscriptionManager
 
 
-async def subscribe_and_listen(names):
+mgr = SubscriptionManager()
 
+async def subscribe_and_listen(names):
     async with mgr.attribute_reads(names) as attribute_reads:
         async for read in attribute_reads:
             print(f"{read.name} -> {read.value}")
 
-
-async def main():
-    await subscribe_and_listen(
-        [
-            "sys/tg_test/1/ampli",
-            "sys/tg_test/1/double_scalar",
-            "sys/tg_test/1/State",
-        ]
-    )
-
-
-mgr = SubscriptionManager()
 ```
