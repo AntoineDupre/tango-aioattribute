@@ -1,5 +1,5 @@
 import asyncio
-from aioattribute.manager import SubscriptionManager
+from aioattribute import SubscriptionManager
 from loguru import logger
 
 

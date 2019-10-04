@@ -2,7 +2,7 @@ import asyncio
 from tango import EventType, DevFailed
 from tango import GreenMode
 from tango import DeviceProxy
-from loguru import logger
+import logging as logger
 
 
 class Attribute:
@@ -25,17 +25,15 @@ class Attribute:
         self.polling_task = None
         # Subscriptions
         self.event_id = None
-        self.subscription_task = None
 
-    def add_listener(self, listener):
+    async def add_listener(self, listener):
         """ Subscribe to event or append a new listener
         to the event callback.
         Event subscription is not blocking (delegated to a task)"""
         logger.debug(f"{self.name} add listener")
         # First client, setup tango connection
         if not self.listeners:
-            # Delegate subscription to a task
-            self.subscription_task = asyncio.ensure_future(self._subscribe())
+            await self._subscribe()
         # Append listener
         self.listeners.append(listener)
 
@@ -95,7 +93,7 @@ class Attribute:
             logger.debug(f"{self.name} notify listeners")
             # Feed listener queues
             for listener in self.listeners:
-                listener.put_nowait(value)
+                listener.put_nowait((self.device, value))
 
     async def _subscribe(self):
         """ Start monitoring an attribute in the best possible way:
@@ -125,6 +123,3 @@ class Attribute:
             self.is_polling = False
             if not self.polling_task.done():
                 self.polling_task.cancel()
-        elif not self.subscription_task.done():
-            # Subscription is not over, cancel it
-            self.subscription_task.cancel()
