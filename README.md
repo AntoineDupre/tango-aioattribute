@@ -8,7 +8,7 @@ It mimics the taurus attribute logic:
 
 A subscribtion object can be used to share tango read attribute event on different listeners:
 
-```python 
+```python
 
 import asyncio
 from aioattribute import SubscriptionManager
@@ -21,4 +21,17 @@ async def subscribe_and_listen(names):
         async for read in attribute_reads:
             print(f"{read.name} -> {read.value}")
 
+```
+
+
+
+### Test
+requires:
+ * pytest
+ * pytest-xdist
+ * pytest-asyncio
+
+run test:
+```
+python -m pytest -v --boxed
 ```
