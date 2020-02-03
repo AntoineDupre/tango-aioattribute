@@ -1,1 +1,1 @@
-from .manager import SubscriptionManager
+from .subscription import SubscriptionManager
