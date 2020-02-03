@@ -32,10 +32,10 @@ class Attribute:
         Event subscription is not blocking (delegated to a task)"""
         logger.debug(f"{self.name} add listener")
         # First client, setup tango connection
-        if not self.listeners:
+        self.listeners.append(listener)
+        if len(self.listeners) <= 1:
             await self._subscribe()
         # Append listener
-        self.listeners.append(listener)
 
     def remove_listener(self, listener):
         """ Remove listener on listener from event notification"""
