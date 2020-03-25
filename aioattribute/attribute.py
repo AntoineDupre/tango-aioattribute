@@ -94,24 +94,23 @@ class Attribute:
         except DevFailed as error:
             logger.error(f"{self.name} DevFailed when reading {self.attr}")
             logger.debug(f"{error}")
-            # TODO: Let the client know in an appropriate way
 
-    async def poller(self):
+    async def poller(self, cb):
         """ Polling task coroutine """
         logger.info(f"{self.name} Start polling")
         try:
             while self.is_polling:
-                await self._read_attribute()
+                await cb()
                 # Schedule next read
                 await asyncio.sleep(self.polling_interval)
         except asyncio.CancelledError:
             logger.info(f"{self.name} Stop polling")
 
-    def _start_polling_task(self):
+    def _start_polling_task(self, cb):
         """ Start a periodic polling task to read the attribute"""
         # Start task
         self.is_polling = True
-        self.polling_task = asyncio.ensure_future(self.poller())
+        self.polling_task = asyncio.ensure_future(self.poller(cb))
 
     def _notify_listeners(self, value):
         """ Propagate value to listeners """
@@ -150,9 +149,9 @@ class Attribute:
             try:
                 await self._try_events_subscription()
             except DevFailed:
-                self._start_polling_task()
+                self._start_polling_task(cb=self._read_attribute)
         else:
-            self._start_polling_task()
+            self._start_polling_task(cb=self._read_attribute)
 
     async def _unsubscribe(self):
         """ Unsubscibe from event channels or cancel polling task"""
@@ -172,3 +171,25 @@ class Attribute:
                 logger.debug(f"{self.name} Polling stopped")
         else:
             self.polling_task.cancel()
+
+
+class BufferAttribute(Attribute):
+    async def _subscribe_events(self, event_type):
+        """ Try to connect to a tango event channel """
+        # TODO, Be sure to not erase event id
+        self.event_id = await self.device_proxy.subscribe_event(
+            self.attr,
+            event_type,
+            1,
+            extract_as=ExtractAs.List,
+            green_mode=GreenMode.Asyncio,
+        )
+        logger.info(
+            f"{self.name} Subscribed to {event_type} (event id: {self.event_id})"
+        )
+        self._start_polling_task(cb=self._read_buffer_attribute)
+
+    async def _read_buffer_attribute(self):
+        if not self.device_proxy.is_event_queue_empty(self.event_id):
+            event = self.device_proxy.get_events(self.event_id)[0]
+            self._on_event(event)
