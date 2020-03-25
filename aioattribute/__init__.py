@@ -1,1 +1,2 @@
-from .subscription import SubscriptionManager
+"""manager for handling attribute subscription/polling """
+from .manager import SubscriptionManager
