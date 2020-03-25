@@ -21,9 +21,7 @@ class Attribute:
         self.device = "/".join(name.split("/")[:-1])
         self.listeners = []
         # Create Proxy
-        self.device_proxy = DeviceProxy(
-            self.device, green_mode=GreenMode.Asyncio
-        )
+        self.device_proxy = DeviceProxy(self.device, green_mode=GreenMode.Asyncio)
         # Polling
         self.is_polling = False
         self.polling_interval = polling_interval
@@ -35,8 +33,10 @@ class Attribute:
         """ Subscribe to event or append a new listener
         to the event callback.
         Event subscription is not blocking (delegated to a task)"""
-        logger.debug(f"{self.name} Add listener, number of listeners "
-                     f"before addition: {len(self.listeners)}")
+        logger.debug(
+            f"{self.name} Add listener, number of listeners "
+            f"before addition: {len(self.listeners)}"
+        )
         # Append listener
         self.listeners.append(listener)
         # First client, setup tango connection
@@ -48,13 +48,17 @@ class Attribute:
         # Unsubscribe to the event if only the listener to be removed is listening to it
         if len(self.listeners) == 1:
             await self._unsubscribe()
-        logger.debug(f"{self.name} Remove listener, number of listeners "
-                     f"before removal: {len(self.listeners)}")
+        logger.debug(
+            f"{self.name} Remove listener, number of listeners "
+            f"before removal: {len(self.listeners)}"
+        )
         self.listeners.remove(listener)
 
     def _on_event(self, event):
         """ Tango event callback """
-        logger.debug(f"{self.name} Event callback, type: {event.event}, error: {event.err}")
+        logger.debug(
+            f"{self.name} Event callback, type: {event.event}, error: {event.err}"
+        )
         if event.err:
             logger.error(f"{self.name} Event error: \n{event}")
         # Propagate event to listeners
@@ -64,9 +68,15 @@ class Attribute:
         """ Try to connect to a tango event channel """
         # TODO, Be sure to not erase event id
         self.event_id = await self.device_proxy.subscribe_event(
-            self.attr, event_type, self._on_event, extract_as=ExtractAs.List, green_mode=GreenMode.Asyncio
+            self.attr,
+            event_type,
+            self._on_event,
+            extract_as=ExtractAs.List,
+            green_mode=GreenMode.Asyncio,
         )
-        logger.info(f"{self.name} Subscribed to {event_type} (event id: {self.event_id})")
+        logger.info(
+            f"{self.name} Subscribed to {event_type} (event id: {self.event_id})"
+        )
 
     def _start_polling_task(self):
         """ Start a periodic polling task to read the attribute"""
@@ -83,7 +93,7 @@ class Attribute:
                         )
                         # Check if value field exists. This is a bug in Tango where it does not include value field on
                         # DeviceAttribute object if DataFormat is SPECTRUM or IMAGE and x and y dimensions are 0
-                        value = getattr(read, 'value', None)
+                        value = getattr(read, "value", None)
                         logger.debug(f"{self.name} Read value {value}")
                         self._notify_listeners(read)
                     except DevFailed as error:
@@ -152,4 +162,3 @@ class Attribute:
                 logger.debug(f"{self.name} Polling stopped")
         else:
             self.polling_task.cancel()
-

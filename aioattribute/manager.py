@@ -10,9 +10,6 @@ except ImportError:
     from async_generator import asynccontextmanager as contextmanager
 
 
-
-
-
 class SubscriptionManager:
     """ Manage attribute subscriptions
     :param use_evt boolean flag - attempt to use event based polling if true (default false)
@@ -21,13 +18,19 @@ class SubscriptionManager:
 
     def __init__(self, use_evt=False, polling_interval=1):
 
-        logger.info(f"====================== Creating New Subscription Manager ==============")
+        logger.info(
+            f"====================== Creating New Subscription Manager =============="
+        )
         if use_evt:
-            logger.info(f"Subscription to Tango events is ENABLED "
-                        f"- TangoGQL will attempt to subscribe to Tango events")
+            logger.info(
+                f"Subscription to Tango events is ENABLED "
+                f"- TangoGQL will attempt to subscribe to Tango events"
+            )
         else:
-            logger.info(f"Subscription to Tango events is DISABLED "
-                        f"- TangoGQL will self poll")
+            logger.info(
+                f"Subscription to Tango events is DISABLED "
+                f"- TangoGQL will self poll"
+            )
 
         self.attributes = {}
         self.event_allowed = use_evt
@@ -37,9 +40,9 @@ class SubscriptionManager:
     def _get_attribute(self, name):
         """ Create a new attribute subscription or return an existing one"""
         if name not in self.attributes:
-            attr = Attribute(name,
-                             use_evt=self.event_allowed,
-                             polling_interval=self.polling_interval)
+            attr = Attribute(
+                name, use_evt=self.event_allowed, polling_interval=self.polling_interval
+            )
             self.attributes[name] = attr
         return self.attributes[name]
 
@@ -80,4 +83,3 @@ class SubscriptionManager:
             for name in names:
                 attribute = self._get_attribute(name)
                 await attribute.remove_listener(listener)
-
