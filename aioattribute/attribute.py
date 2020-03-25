@@ -21,7 +21,9 @@ class Attribute:
         self.device = "/".join(name.split("/")[:-1])
         self.listeners = []
         # Create Proxy
-        self.device_proxy = DeviceProxy(self.device, green_mode=GreenMode.Asyncio)
+        self.device_proxy = DeviceProxy(
+            self.device, green_mode=GreenMode.Asyncio
+        )
         # Polling
         self.is_polling = False
         self.polling_interval = polling_interval
@@ -78,36 +80,38 @@ class Attribute:
             f"{self.name} Subscribed to {event_type} (event id: {self.event_id})"
         )
 
+    async def _read_attribute(self):
+        try:
+            # Read attribute
+            read = await self.device_proxy.read_attribute(
+                self.attr, extract_as=ExtractAs.List
+            )
+            # Check if value field exists. This is a bug in Tango where it does not include value field on
+            # DeviceAttribute object if DataFormat is SPECTRUM or IMAGE and x and y dimensions are 0
+            value = getattr(read, "value", None)
+            logger.debug(f"{self.name} Read value {value}")
+            self._notify_listeners(read)
+        except DevFailed as error:
+            logger.error(f"{self.name} DevFailed when reading {self.attr}")
+            logger.debug(f"{error}")
+            # TODO: Let the client know in an appropriate way
+
+    async def poller(self):
+        """ Polling task coroutine """
+        logger.info(f"{self.name} Start polling")
+        try:
+            while self.is_polling:
+                await self._read_attribute()
+                # Schedule next read
+                await asyncio.sleep(self.polling_interval)
+        except asyncio.CancelledError:
+            logger.info(f"{self.name} Stop polling")
+
     def _start_polling_task(self):
         """ Start a periodic polling task to read the attribute"""
-
-        async def poll_coro():
-            """ Polling task coroutine """
-            logger.info(f"{self.name} Start polling")
-            try:
-                while self.is_polling:
-                    try:
-                        # Read attribute
-                        read = await self.device_proxy.read_attribute(
-                            self.attr, extract_as=ExtractAs.List
-                        )
-                        # Check if value field exists. This is a bug in Tango where it does not include value field on
-                        # DeviceAttribute object if DataFormat is SPECTRUM or IMAGE and x and y dimensions are 0
-                        value = getattr(read, "value", None)
-                        logger.debug(f"{self.name} Read value {value}")
-                        self._notify_listeners(read)
-                    except DevFailed as error:
-                        logger.error(f"{self.name} DevFailed when reading {self.attr}")
-                        logger.debug(f"{error}")
-                        # TODO: Let the client know in an appropriate way
-                    # Schedule next read
-                    await asyncio.sleep(self.polling_interval)
-            except asyncio.CancelledError:
-                logger.info(f"{self.name} Stop polling")
-
         # Start task
         self.is_polling = True
-        self.polling_task = asyncio.ensure_future(poll_coro())
+        self.polling_task = asyncio.ensure_future(self.poller())
 
     def _notify_listeners(self, value):
         """ Propagate value to listeners """
@@ -120,11 +124,15 @@ class Attribute:
     async def _try_events_subscription(self):
         try:
             # Change event
-            logger.debug(f"{self.name} Try subscribing to {EventType.CHANGE_EVENT}")
+            logger.debug(
+                f"{self.name} Try subscribing to {EventType.CHANGE_EVENT}"
+            )
             await self._subscribe_events(EventType.CHANGE_EVENT)
         except DevFailed:
             # Periodic Event
-            logger.debug(f"{self.name} Try subscribing to {EventType.PERIODIC_EVENT}")
+            logger.debug(
+                f"{self.name} Try subscribing to {EventType.PERIODIC_EVENT}"
+            )
             await self._subscribe_events(EventType.PERIODIC_EVENT)
 
     async def _subscribe(self):
@@ -153,7 +161,9 @@ class Attribute:
             if self.event_id:
                 # Unsubscribe event
                 await self.device_proxy.unsubscribe_event(self.event_id)
-                logger.debug(f"{self.name} Unsubscribed from event {self.event_id}")
+                logger.debug(
+                    f"{self.name} Unsubscribed from event {self.event_id}"
+                )
             elif self.is_polling:
                 # Stop polling task
                 self.is_polling = False
